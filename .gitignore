@@ -1,0 +1,9 @@
+**/localsettings.py
+**/celerybeat-schedule
+**/.env
+**/db_data
+**public
+**.venv
+**.idea
+templates
+celerybeat-schedule

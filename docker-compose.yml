@@ -1,0 +1,66 @@
+version: "3.8"
+
+services:
+  django_app:
+    build: .
+    command:
+      - sh
+      - -c
+      - |
+        python manage.py collectstatic --noinput
+        python manage.py makemigrations
+        python manage.py migrate
+        gunicorn --bind 0.0.0.0:8000 -w 1 --threads 1 my_amazon_learning.wsgi
+    volumes:
+      - .:/usr/src/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=1
+      - DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]
+      - CELERY_BROKER=redis://redis:6379/0
+      - CELERY_BACKEND=redis://redis:6379/0
+    depends_on:
+#      - pg_db
+      - redis
+  redis:
+    image: redis:5.0.8-alpine3.11
+  celery_worker:
+    build: .
+    command:
+      - sh
+      - -c
+      - |
+        celery -A my_amazon_learning worker -l INFO
+    volumes:
+      - .:/usr/src/app
+    environment:
+      - DEBUG=1
+      - DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]
+    depends_on:
+      - redis
+  celery_beat:
+    build: .
+    command:
+      - sh
+      - -c
+      - |
+        celery -A my_amazon_learning beat -l INFO
+    volumes:
+      - .:/usr/src/app
+    environment:
+      - DEBUG=1
+      - DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]
+    depends_on:
+      - redis
+#  pg_db:
+#    image: postgres:12.2
+#    container_name: pg_db
+#    environment:
+#      - POSTGRES_DB=a
+#      - POSTGRES_USER=a
+#      - POSTGRES_PASSWORD=a
+#    volumes:
+#      - ./db_data/:/var/lib/postgresql/data/
+#    ports:
+#      - 5455:5432 # for local only
